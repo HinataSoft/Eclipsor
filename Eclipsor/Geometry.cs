@@ -6,30 +6,35 @@ namespace Eclipsor
 {
     public class Geometry
     {
-        public struct Point
+        public class Point
         {
-            public double x;
-            public double y;
-            public double z;
+            public readonly double x;
+            public readonly double y;
+            public readonly double z;
+
+            public Point(double x, double y, double z)
+            {
+                this.x = x;
+                this.y = y;
+                this.z = z;
+            }
 
             public Point GetPointByAdding(Vector v)
             {
-                return new Point()
-                {
-                    x = x + v.dx,
-                    y = y + v.dy,
-                    z = z + v.dz
-                };
+                return new Point(
+                    x: x + v.dx,
+                    y: y + v.dy,
+                    z: z + v.dz
+                );
             }
 
             public Point GetPointByAdding(Vector v, double koef)
             {
-                return new Point()
-                {
-                    x = x + v.dx * koef,
-                    y = y + v.dy * koef,
-                    z = z + v.dz * koef
-                };
+                return new Point(
+                    x: x + v.dx * koef,
+                    y: y + v.dy * koef,
+                    z: z + v.dz * koef
+                );
             }
 
             public override string ToString()
@@ -38,12 +43,12 @@ namespace Eclipsor
             }
         }
 
-        public struct Vector
+        public class Vector
         {
-            public double dx;
-            public double dy;
-            public double dz;
-            public bool unity;
+            public readonly double dx;
+            public readonly double dy;
+            public readonly double dz;
+            public readonly bool unity;
 
             public Vector(Vector v)
             {
@@ -61,6 +66,14 @@ namespace Eclipsor
                 unity = false;
             }
 
+            public Vector(double dx, double dy, double dz, bool unity = false)
+            {
+                this.dx = dx;
+                this.dy = dy;
+                this.dz = dz;
+                this.unity = unity;
+            }
+
             public double Size
             {
                 get { return unity ? 1 : Extensions.Distance(dx, dy, dz); }
@@ -71,39 +84,51 @@ namespace Eclipsor
                 get { return unity ? 1 : Extensions.Distance2(dx, dy, dz); }
             }
 
-            public void Normalize()
+            public Vector Normalize()
             {
                 double size = Size;
-                Divide(size);
-                unity = true;
+                return new Vector(
+                    dx: dx / size,
+                    dy: dy / size,
+                    dz: dz / size,
+                    unity: true
+                );
             }
 
-            public void Add(Vector v2)
+            public Vector Add(Vector v2)
             {
-                dx += v2.dx;
-                dy += v2.dy;
-                dz += v2.dz;
+                return new Vector(
+                    dx: dx + v2.dx,
+                    dy: dy + v2.dy,
+                    dz: dz + v2.dz
+                );
             }
 
-            public void Subtract(Vector v2)
+            public Vector Subtract(Vector v2)
             {
-                dx -= v2.dx;
-                dy -= v2.dy;
-                dz -= v2.dz;
+                return new Vector(
+                    dx: dx - v2.dx,
+                    dy: dy - v2.dy,
+                    dz: dz - v2.dz
+                );
             }
 
-            public void Divide(double factor)
+            public Vector Divide(double factor)
             {
-                dx /= factor;
-                dy /= factor;
-                dz /= factor;
+                return new Vector(
+                    dx: dx / factor,
+                    dy: dy / factor,
+                    dz: dz / factor
+                );
             }
 
-            public void Multiply(double factor)
+            public Vector Multiply(double factor)
             {
-                dx *= factor;
-                dy *= factor;
-                dz *= factor;
+                return new Vector(
+                    dx: dx * factor,
+                    dy: dy * factor,
+                    dz: dz * factor
+                );
             }
 
             public override string ToString()
@@ -113,12 +138,11 @@ namespace Eclipsor
 
             public static Vector Subtract(Vector v1, Vector v2)
             {
-                return new Vector()
-                {
-                    dx = v1.dx - v2.dx,
-                    dy = v1.dy - v2.dy,
-                    dz = v1.dz - v2.dz
-                };
+                return new Vector(
+                    dx: v1.dx - v2.dx,
+                    dy: v1.dy - v2.dy,
+                    dz: v1.dz - v2.dz
+                );
             }
         }
 
@@ -126,12 +150,6 @@ namespace Eclipsor
         {
             public Point origin;
             public Vector vector;
-
-            public Line()
-            {
-                origin = new Point();
-                vector = new Vector();
-            }
 
             public Line(Point origin, Vector vector)
             {
@@ -141,12 +159,11 @@ namespace Eclipsor
 
             public Point GetPoint(double factor)
             {
-                return new Point()
-                {
-                    x = origin.x + factor * vector.dx,
-                    y = origin.y + factor * vector.dy,
-                    z = origin.z + factor * vector.dz
-                };
+                return new Point(
+                    x: origin.x + factor * vector.dx,
+                    y: origin.y + factor * vector.dy,
+                    z: origin.z + factor * vector.dz
+                );
             }
 
             public Point GetClosestPointTo(Point p)
@@ -169,8 +186,7 @@ namespace Eclipsor
             public Geometry.Vector GetNormal(Geometry.Point p)
             {
                 var v = new Geometry.Vector(center, p);
-                v.Normalize();
-                return v;
+                return v.Normalize();
             }
 
             public override string ToString()

@@ -10,11 +10,9 @@ namespace Eclipsor
         {
         }
 
-        public void Render(IPointObject obj, double time, double angle, DistPoint[,] dists, double[] flux, int fluxIndex)
+        public void Render(List<RendererHelper.StarMoved> stars, DistPoint[,] dists, double[] flux, int fluxIndex)
         {
             DistPoint.Reset(dists);
-
-            var stars = RendererHelper.GetAngledStars(obj, angle);
 
             double width, height;
             RendererHelper.GetBoundingBox(stars, out width, out height);
@@ -41,33 +39,24 @@ namespace Eclipsor
             double woy = -200 * wdy;
             double woz = -200 * wdz;
 
-            Geometry.Line ray = new Geometry.Line()
-            {
-                origin = new Geometry.Point()
-                {
-                    x = 0,
-                    y = woy,
-                    z = woz
-                },
-                vector = new Geometry.Vector()
-                {
-                    dx = 0,
-                    dy = wdy,
-                    dz = wdz
-                }
-            };
-
             for (int yy = 0; yy < yymax; yy++)
             {
-                //ray.origin.z = (yy - yyoffs) / zoom;
-
                 double y = (yy - yyoffs) / zoom;
-                ray.origin.y = woy - y * wdz;
-                ray.origin.z = woz + y * wdy;
 
                 for (int xx = 0; xx < xxmax; xx++)
                 {
-                    ray.origin.x = (xx - xxoffs) / zoom;
+                    Geometry.Line ray = new Geometry.Line(
+                        origin: new Geometry.Point(
+                            x: (xx - xxoffs) / zoom,
+                            y: woy - y * wdz,
+                            z: woz + y * wdy
+                        ),
+                        vector: new Geometry.Vector(
+                            dx: 0,
+                            dy: wdy,
+                            dz: wdz
+                        )
+                    );
 
                     RendererHelper.StarMoved star;
                     double t = FindIntersection(stars, null, ray, out star);
@@ -90,7 +79,7 @@ namespace Eclipsor
 
                                 Geometry.Vector toStar2 = new Geometry.Vector(hitPoint, star2.center);
                                 double toStar2Size = toStar2.Size;
-                                toStar2.Normalize();
+                                toStar2 = toStar2.Normalize();
                                 double dp = Geometry.DotProduct(toStar2, normal);
                                 if (dp > 0)
                                 {
@@ -170,7 +159,7 @@ namespace Eclipsor
                             reflection.Multiply(2 * -Geometry.DotProduct(ray.vector, normal));
                             reflection.Add(ray.vector);
 
-                            Star star2;
+                            RendererHelper.StarMoved star2;
                             double t2 = FindIntersection(stars, star, hitPoint, reflection, out star2);
                             if (star2 != null)
                             { br += star2.exitance / (t2 * t2); }

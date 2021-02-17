@@ -11,6 +11,8 @@ namespace Eclipsor
 {
     public partial class MainForm : Form
     {
+        readonly object distsLockObject = new object();
+
         Binary root;
         double[] flux;
         double[] mags;
@@ -113,12 +115,33 @@ namespace Eclipsor
             rendererComboBox.SelectedIndex = 0;
         }
 
+        private DistPoint[,] LockDists()
+        {
+            DistPoint[,] result;
+            lock (distsLockObject)
+            {
+                result = dists;
+            }
+            return result;
+        }
+        private void SetDists(DistPoint[,] tmpDists)
+        {
+            lock (distsLockObject)
+            {
+                dists = tmpDists;
+            }
+        }
+
         private void trackBar1_Scroll(object sender, EventArgs e)
         {
             angleLabel.Text = trackBar2.Value.ToString() + "°";
             currentTime = trackBar1.Value;
             root.PlaceInTime(currentTime);
-            renderer.Render(root, currentTime, Extensions.DegToRad(trackBar2.Value), dists, flux, currentTime * currentTimeFactor);
+            List<RendererHelper.StarMoved> stars = RendererHelper.GetAngledStars(root, currentTime, Extensions.DegToRad(trackBar2.Value));
+
+            DistPoint[,] tmpDists = LockDists();
+            renderer.Render(stars, tmpDists, flux, currentTime * currentTimeFactor);
+            SetDists(tmpDists);
 
             pictureBox1.Invalidate();
             pictureBox2.Invalidate();
@@ -246,13 +269,16 @@ namespace Eclipsor
                 { max = star.exitance; }
             }
 
+
+            DistPoint[,] tmpDists = LockDists();
+
             max /= 9;
             Bitmap bmp = new Bitmap(pictureBox2.Width, pictureBox2.Height);
             for (int yy = 0; yy < pictureBox2.Height; yy++)
             {
                 for (int xx = 0; xx < pictureBox2.Width; xx++)
                 {
-                    double br = dists[xx, yy].brightness / max;
+                    double br = tmpDists[xx, yy].brightness / max;
                     int color = (int)(Math.Log10(1 + br) * 250);
                     if (color > 255)
                     { color = 255; }
@@ -349,33 +375,37 @@ namespace Eclipsor
             fpsStart = DateTime.Now;
             double angle = (double)e.Argument;
             int counter = 0;
-            for (int i = 0; i < trackBar1.Maximum * currentTimeFactor; i++)
+            int pctCounterValue = (trackBar1.Maximum * currentTimeFactor) / 100;
+            if (pctCounterValue == 0)
+            { pctCounterValue = 1; }
+            //for (int ii = 0; ii < trackBar1.Maximum * currentTimeFactor; ii++)
+            System.Threading.Tasks.Parallel.For(0, trackBar1.Maximum * currentTimeFactor, (ii) =>
             {
-                if (flux[i] > int.MinValue)
-                { continue; }
-
-                double currentTime = (double)i / currentTimeFactor;
-                root.PlaceInTime(currentTime);
-                renderer.Render(root, currentTime, angle, dists, flux, i);
-                counter++;
-                fpsCounter++;
-                if (counter > 10)
-                {
-                    backgroundWorker1.ReportProgress(i * 100 / trackBar1.Maximum, i);
-                    counter = 0;
-                }
+                int i = System.Threading.Interlocked.Increment(ref counter);
                 if (backgroundWorker1.CancellationPending)
                 {
                     e.Cancel = true;
                     return;
                 }
-            }
+                double currentTime = (double)i / currentTimeFactor;
+                root.PlaceInTime(currentTime);
+                var tmpDists = new DistPoint[pictureBox2.Width, pictureBox2.Height];
+                List<RendererHelper.StarMoved> stars = RendererHelper.GetAngledStars(root, currentTime, angle);
+                renderer.Render(stars, tmpDists, flux, i);
+                SetDists(tmpDists);
+                System.Threading.Interlocked.Increment(ref fpsCounter);
+                if (i % pctCounterValue == 0)
+                {
+                    backgroundWorker1.ReportProgress(i * 100 / trackBar1.Maximum, i);
+                }
+            });
         }
 
         private void backgroundWorker1_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
             currentTime = (Int32)(e.UserState);
             pictureBox1.Invalidate();
+            pictureBox2.Invalidate();
             pictureBox3.Invalidate();
             showFPS();
         }
@@ -394,8 +424,9 @@ namespace Eclipsor
 
         private void showFPS()
         {
+            int tmpFpsCounter = fpsCounter;
             fpsLabel.Text = "FPS: " + 
-                ((fpsCounter > 0) ? (fpsCounter * 1000.0 / DateTime.Now.Subtract(fpsStart).TotalMilliseconds).ToString("F2") : "");
+                ((tmpFpsCounter > 0) ? (tmpFpsCounter * 1000.0 / DateTime.Now.Subtract(fpsStart).TotalMilliseconds).ToString("F2") : "");
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -415,7 +446,10 @@ namespace Eclipsor
         private void rendererComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
             renderer = renderers[rendererComboBox.SelectedIndex];
-            renderer.Render(root, currentTime, Extensions.DegToRad(trackBar2.Value), dists, flux, currentTime * currentTimeFactor);
+            List<RendererHelper.StarMoved> stars = RendererHelper.GetAngledStars(root, currentTime, Extensions.DegToRad(trackBar2.Value));
+            DistPoint[,] tmpDists = LockDists();
+            renderer.Render(stars, tmpDists, flux, currentTime * currentTimeFactor);
+            SetDists(tmpDists);
             pictureBox2.Invalidate();
         }
     }

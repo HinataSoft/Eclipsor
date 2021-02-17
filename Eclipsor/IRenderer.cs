@@ -24,7 +24,7 @@ namespace Eclipsor
 
     public interface IRenderer
     {
-        void Render(IPointObject obj, double time, double angle, DistPoint[,] dists, double[] flux, int fluxIndex);
+        void Render(List<RendererHelper.StarMoved> stars, DistPoint[,] dists, double[] flux, int fluxIndex);
     }
 
     public static class RendererHelper
@@ -38,7 +38,7 @@ namespace Eclipsor
 
             public StarMoved(double radius, double exitance, double x, double y, double z)
             {
-                this.sphere = new Geometry.Sphere() { center = new Geometry.Point() { x = x, y = y, z = z }, radius = radius };
+                this.sphere = new Geometry.Sphere() { center = new Geometry.Point(x: x, y: y, z: z ), radius = radius };
                 this.exitance = exitance;
             }
         }

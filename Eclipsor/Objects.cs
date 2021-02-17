@@ -86,12 +86,11 @@ namespace Eclipsor
 
         public void SetOrigin(double x, double y)
         {
-            sphere.center = new Geometry.Point()
-            {
-                x = x,
-                y = y,
-                z = 0
-            };
+            sphere.center = new Geometry.Point(
+                x: x,
+                y: y,
+                z: 0
+            );
         }
 
         public override string ToString()

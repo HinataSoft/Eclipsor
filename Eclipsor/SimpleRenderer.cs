@@ -10,11 +10,10 @@ namespace Eclipsor
         {
         }
 
-        public void Render(IPointObject obj, double time, double angle, DistPoint[,] dists, double[] flux, int fluxIndex)
+        public void Render(List<RendererHelper.StarMoved> stars, DistPoint[,] dists, double[] flux, int fluxIndex)
         {
             DistPoint.Reset(dists);
 
-            var stars = RendererHelper.GetAngledStars(obj, time, angle);
             stars.Sort((a, b) => a.center.y.CompareTo(b.center.y));
 
             double width, height;
