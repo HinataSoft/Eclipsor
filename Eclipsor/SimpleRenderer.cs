@@ -6,25 +6,22 @@ namespace Eclipsor
 {
     public class SimpleRenderer : IRenderer
     {
-        private int nsize;
-
-        public SimpleRenderer(int nsize)
+        public SimpleRenderer()
         {
-            this.nsize = nsize;
         }
 
-        public void Render(IPointObject obj, int time, double angle, DistPoint[,] dists, double[] flux)
+        public void Render(IPointObject obj, double time, double angle, DistPoint[,] dists, double[] flux, int fluxIndex)
         {
             DistPoint.Reset(dists);
 
-            var stars = RendererHelper.GetAngledStars(obj, angle);
+            var stars = RendererHelper.GetAngledStars(obj, time, angle);
             stars.Sort((a, b) => a.center.y.CompareTo(b.center.y));
 
             double width, height;
             RendererHelper.GetBoundingBox(stars, out width, out height);
 
             // +++ HACK
-            //width = 35;
+            //width = 45;
             //height = 10;
             // -- HACK
 
@@ -65,7 +62,7 @@ namespace Eclipsor
                             if (dists[xx, yy].dist < ydist)
                             { continue; }
 
-                            double br = Physics.LimbDarkening(star.origStar.exitance, cosTheta);
+                            double br = Physics.LimbDarkening(star.exitance, cosTheta);
                             dists[xx, yy].dist = ydist;
                             dists[xx, yy].brightness = br;
                             brightness += br;
@@ -108,7 +105,7 @@ namespace Eclipsor
 
             #endregion
 
-            flux[time] = brightness / (zoom * zoom);
+            flux[fluxIndex] = brightness / (zoom * zoom);
         }
     }
 }

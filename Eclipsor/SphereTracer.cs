@@ -6,21 +6,25 @@ namespace Eclipsor
 {
     class SphereTracer : IRenderer
     {
-        private int nsize;
-
-        public SphereTracer(int nsize)
+        public SphereTracer()
         {
-            this.nsize = nsize;
         }
 
-        public void Render(IPointObject obj, int time, double angle, DistPoint[,] dists, double[] flux)
+        public void Render(IPointObject obj, double time, double angle, DistPoint[,] dists, double[] flux, int fluxIndex)
         {
             DistPoint.Reset(dists);
 
-            var stars = RendererHelper.GetStars(obj);
+            var stars = RendererHelper.GetAngledStars(obj, angle);
 
             double width, height;
-            RendererHelper.GetBoundingBox(obj, angle, out width, out height);
+            RendererHelper.GetBoundingBox(stars, out width, out height);
+
+            // +++ HACK
+            //width = 45;
+            //height = 10;
+            // -- HACK
+
+            double viewAngle = 0;
 
             int xxmax = dists.GetLength(0);
             int yymax = dists.GetLength(1);
@@ -31,8 +35,8 @@ namespace Eclipsor
             int yyoffs = yymax / 2;
             double brightness = 0;
 
-            double wdy = Math.Cos(angle);
-            double wdz = Math.Sin(angle);
+            double wdy = Math.Cos(viewAngle);
+            double wdz = Math.Sin(viewAngle);
 
             double woy = -200 * wdy;
             double woz = -200 * wdz;
@@ -65,7 +69,7 @@ namespace Eclipsor
                 {
                     ray.origin.x = (xx - xxoffs) / zoom;
 
-                    Star star;
+                    RendererHelper.StarMoved star;
                     double t = FindIntersection(stars, null, ray, out star);
 
                     if (star != null)
@@ -79,7 +83,7 @@ namespace Eclipsor
 
                         // ILLUMINATION
                         {
-                            foreach (Star star2 in stars)
+                            foreach (RendererHelper.StarMoved star2 in stars)
                             {
                                 if (star2 == star)
                                 { continue; }
@@ -91,7 +95,7 @@ namespace Eclipsor
                                 if (dp > 0)
                                 {
                                     double shadow = double.PositiveInfinity;
-                                    foreach (Star star3 in stars)
+                                    foreach (RendererHelper.StarMoved star3 in stars)
                                     {
                                         if ((star3 == star) || (star3 == star2))
                                         { continue; }
@@ -200,19 +204,19 @@ namespace Eclipsor
                 }
             }
 
-            flux[time] = brightness / (zoom * zoom);
+            flux[fluxIndex] = brightness / (zoom * zoom);
         }
 
-        private static double FindIntersection(IList<Star> stars, Star skipStar, Geometry.Line ray, out Star outStar)
+        private static double FindIntersection(IList<RendererHelper.StarMoved> stars, RendererHelper.StarMoved skipStar, Geometry.Line ray, out RendererHelper.StarMoved outStar)
         {
             return FindIntersection(stars, skipStar, ray.origin, ray.vector, out outStar);
         }
 
-        private static double FindIntersection(IList<Star> stars, Star skipStar, Geometry.Point origin, Geometry.Vector vector, out Star outStar)
+        private static double FindIntersection(IList<RendererHelper.StarMoved> stars, RendererHelper.StarMoved skipStar, Geometry.Point origin, Geometry.Vector vector, out RendererHelper.StarMoved outStar)
         {
             outStar = null;
             double minP = double.PositiveInfinity;
-            foreach (Star star in stars)
+            foreach (RendererHelper.StarMoved star in stars)
             {
                 if (star == skipStar)
                 { continue; }

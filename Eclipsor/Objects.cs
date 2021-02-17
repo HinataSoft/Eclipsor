@@ -41,6 +41,7 @@ namespace Eclipsor
     {
         void PlaceInTime(double time);
         void SetOrigin(double x, double y);
+        IEnumerable<RendererHelper.StarMoved> GetStarsMoved(double time, double originX, double originY, double originZ);
     }
 
     public class Star : IPointObject
@@ -76,6 +77,11 @@ namespace Eclipsor
 
         public void PlaceInTime(double time)
         {
+        }
+
+        public IEnumerable<RendererHelper.StarMoved> GetStarsMoved(double time, double originX, double originY, double originZ)
+        {
+            yield return new RendererHelper.StarMoved(this.radius, this.exitance, originX, originY, originZ);
         }
 
         public void SetOrigin(double x, double y)
@@ -115,6 +121,19 @@ namespace Eclipsor
             );
             point.PlaceInTime(time);
         }
+
+        public IEnumerable<RendererHelper.StarMoved> GetStarsMoved(double phase, double time, double originX, double originY, double originZ)
+        {
+            phase += phase0;
+            foreach (RendererHelper.StarMoved starMoved in point.GetStarsMoved(time, 
+                originX + Math.Sin(phase.PhaseToRad()) * radius,
+                originY + Math.Cos(phase.PhaseToRad()) * radius,
+                originZ
+            ))
+            {
+                yield return starMoved;
+            }
+        }
     }
 
     public class Binary : IPointObject
@@ -137,6 +156,29 @@ namespace Eclipsor
             double phase = time / period + phase0;
             o1.Place(time, phase, this);
             o2.Place(time, phase + 0.5, this);
+        }
+
+        public IEnumerable<RendererHelper.StarMoved> GetStarsMoved(double time, double originX, double originY, double originZ)
+        {
+            double phase = time / period + phase0;
+            foreach (RendererHelper.StarMoved starMoved in o1.GetStarsMoved(phase,
+                time,
+                originX,
+                originY,
+                originZ
+            ))
+            {
+                yield return starMoved;
+            }
+            foreach (RendererHelper.StarMoved starMoved in o2.GetStarsMoved(phase + 0.5,
+                time,
+                originX,
+                originY,
+                originZ
+            ))
+            {
+                yield return starMoved;
+            }
         }
 
         public void SetOrigin(double x, double y)

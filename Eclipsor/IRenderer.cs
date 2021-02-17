@@ -24,32 +24,43 @@ namespace Eclipsor
 
     public interface IRenderer
     {
-        void Render(IPointObject obj, int time, double angle, DistPoint[,] dists, double[] flux);
+        void Render(IPointObject obj, double time, double angle, DistPoint[,] dists, double[] flux, int fluxIndex);
     }
 
     public static class RendererHelper
     {
-        public struct StarMoved
+        public class StarMoved
         {
-            public Star origStar;
-            public Geometry.Point center;
-            public double radius { get { return origStar.sphere.radius; } }
+            public Geometry.Sphere sphere;
+            public Geometry.Point center => sphere.center;
+            public double radius => sphere.radius;
+            public double exitance;
+
+            public StarMoved(double radius, double exitance, double x, double y, double z)
+            {
+                this.sphere = new Geometry.Sphere() { center = new Geometry.Point() { x = x, y = y, z = z }, radius = radius };
+                this.exitance = exitance;
+            }
         }
 
+        private static readonly object starsLockObject = new object();
         private static Dictionary<IPointObject, IList<Star>> stars = new Dictionary<IPointObject, IList<Star>>();
 
         public static IList<Star> GetStars(IPointObject obj)
         {
-            IList<Star> result;
-            if (stars.TryGetValue(obj, out result))
-            { return result; }
+            lock (starsLockObject)
+            {
+                IList<Star> result;
+                if (stars.TryGetValue(obj, out result))
+                { return result; }
 
-            result = new List<Star>();
-            stars[obj] = result;
+                result = new List<Star>();
+                stars[obj] = result;
 
-            FillStars(obj, result);
+                FillStars(obj, result);
 
-            return result;
+                return result;
+            }
         }
 
         private static void FillStars(IPointObject obj, IList<Star> result)
@@ -71,24 +82,35 @@ namespace Eclipsor
             double cos = Math.Cos(angle);
             foreach (Star origStar in RendererHelper.GetStars(obj))
             {
-                var star = new StarMoved()
-                {
-                    origStar = origStar,
-                    center = new Geometry.Point()
-                    {
-                        x = origStar.center.x,
-                        y = origStar.center.y * cos - origStar.center.z * sin,
-                        z = -origStar.center.y * sin - origStar.center.z * cos
-                    }
-                };
+                var star = new StarMoved(
+                    radius: origStar.radius,
+                    exitance: origStar.exitance,
+                    x: origStar.center.x,
+                    y: origStar.center.y * cos - origStar.center.z * sin,
+                    z: -origStar.center.y * sin - origStar.center.z * cos
+                );
                 stars.Add(star);
             }
             return stars;
         }
 
-        public static void GetBoundingBox(IPointObject obj, double angle, out double width, out double height)
+        public static List<StarMoved> GetAngledStars(IPointObject obj, double time, double angle)
         {
-            GetBoundingBox(GetAngledStars(obj, angle), out width, out height);
+            var stars = new List<StarMoved>();
+            double sin = Math.Sin(angle);
+            double cos = Math.Cos(angle);
+            foreach (StarMoved origStar in obj.GetStarsMoved(time, 0, 0, 0))
+            {
+                var star = new StarMoved(
+                    radius: origStar.radius,
+                    exitance: origStar.exitance,
+                    x: origStar.center.x,
+                    y: origStar.center.y * cos - origStar.center.z * sin,
+                    z: -origStar.center.y * sin - origStar.center.z * cos
+                );
+                stars.Add(star);
+            }
+            return stars;
         }
 
         public static void GetBoundingBox(List<StarMoved> starsMovedList, out double width, out double height)

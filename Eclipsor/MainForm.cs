@@ -12,11 +12,11 @@ namespace Eclipsor
     public partial class MainForm : Form
     {
         Binary root;
-        int nsize = 200;
         double[] flux;
         double[] mags;
         DistPoint[,] dists;
         int currentTime;
+        int currentTimeFactor;
         IRenderer renderer;
         IRenderer[] renderers;
 
@@ -27,43 +27,86 @@ namespace Eclipsor
         {
             InitializeComponent();
 
-            double fact = 1;// trackBar1.Maximum / 2 / 1.209373;
+            //double fact = 1;// trackBar1.Maximum / 2 / 1.209373;
+            double fact = trackBar1.Maximum / 2 / 4;
 
-            Binary inner = new Binary(new Star(2, 1.4), new Star(2, 1.6));
-            inner.o1.radius = 4;
-            inner.o2.radius = 4;
-            inner.period = 1.209373 * fact;
-            inner.phase0 = 0.085;
+            currentTimeFactor = 1;
 
-            Binary inner2 = new Binary(new Star(3, 1), new Star(3, 1));
+            // CzeV343
+            //Binary inner = new Binary(new Star(2, 1.4), new Star(2, 1.6));
+            //inner.o1.radius = 4;
+            //inner.o2.radius = 4;
+            //inner.period = 1.209373 * fact;
+            //inner.phase0 = 0.085;
+
+            //Binary inner2 = new Binary(new Star(3, 1), new Star(3, 1));
+            //inner2.o1.radius = 4;
+            //inner2.o2.radius = 4;
+            //inner2.period = 0.806931 * fact;
+            //inner2.phase0 = 0;
+
+            //root = new Binary(inner, inner2);
+            //root.o1.radius = 4;
+            //root.o2.radius = 4;
+            //root.period = 605;
+            //root.phase0 = 0.3;
+
+            // https://arxiv.org/pdf/2101.03433.pdf
+            // P. Zasche
+            Binary inner = new Binary(new Star(1.49, 6400), new Star(0.52, 3923));
+            inner.o1.radius = 2;
+            inner.o2.radius = 2;
+            inner.period = 1.57 * fact;
+            inner.phase0 = 0.1;
+
+            Binary inner2 = new Binary(new Star(1.62, 6365), new Star(0.62, 4290));
             inner2.o1.radius = 4;
             inner2.o2.radius = 4;
-            inner2.period = 0.806931 * fact;
-            inner2.phase0 = 0;
+            inner2.period = 1.306 * fact;
+            inner2.phase0 = 0.8;
+
+            Binary inner3 = new Binary(new Star(1.45, 6350), new Star(0.56, 3990));
+            inner3.o1.radius = 4;
+            inner3.o2.radius = 4;
+            inner3.period = 8.217 * fact;
+            inner3.phase0 = 0.3;
+
+            Binary inner1_2 = new Binary(inner, inner2);
+            inner1_2.o1.radius = 16;
+            inner1_2.o2.radius = 16;
+            inner1_2.period = 3.7 * 365 * fact;
+            inner1_2.phase0 = 0.25;
+
+            root = new Binary(inner1_2, inner3);
+            root.o1.radius = 32;
+            root.o2.radius = 32;
+            root.period = 2000 * 365 * fact;
+            root.phase0 = 0.5;
 
             //root = new Binary(inner, inner2);
             //root = new Binary(inner, new Star(25, 50));
-            root = new Binary(new Star(4, 10), new Star(0.5, 11));
-            //root = new Binary(new Star(25, 6000), new Star(5, 3000));
-            root.o1.radius = 4;
-            root.o2.radius = 4;
-            root.period = 605;
-            root.phase0 = 0.3;
+            //root = new Binary(new Star(4, 10), new Star(0.5, 11));
+            //root = new Binary(new Star(5, 10000), new Star(5, 1));
+            //root.o1.radius = 6;
+            //root.o2.radius = 6;
+            //root.period = 605;
+            //root.phase0 = 0.3;
+
             root.PlaceInTime(0);
 
             trackBar2.Value = 0;
             angleLabel.Text = trackBar2.Value.ToString() + "°";
 
-            flux = new double[trackBar1.Maximum + 1];
+            flux = new double[trackBar1.Maximum * currentTimeFactor + 1];
             for (int i = 0; i < flux.Length; i++)
             { flux[i] = double.NaN; }
             mags = new double[flux.Length];
 
             dists = new DistPoint[pictureBox2.Width, pictureBox2.Height];
 
-            //renderers = new IRenderer[] { new SphereTracer(nsize), new SimpleRenderer(nsize) };
-            renderers = new IRenderer[] { new SimpleRenderer(nsize), new SphereTracer(nsize) };
-            //renderers = new IRenderer[] { new SphereTracer(nsize), new SphereTracerOld(nsize), new SimpleRenderer(nsize) };
+            renderers = new IRenderer[] { new SphereTracer(), new SimpleRenderer() };
+            //renderers = new IRenderer[] { new SimpleRenderer(), new SphereTracer() };
+            //renderers = new IRenderer[] { new SphereTracer(), new SphereTracerOld(), new SimpleRenderer() };
             foreach (IRenderer r in renderers)
             { rendererComboBox.Items.Add(r.GetType().Name); }
             renderer = renderers[0];
@@ -75,7 +118,7 @@ namespace Eclipsor
             angleLabel.Text = trackBar2.Value.ToString() + "°";
             currentTime = trackBar1.Value;
             root.PlaceInTime(currentTime);
-            renderer.Render(root, currentTime, Extensions.DegToRad(trackBar2.Value), dists, flux);
+            renderer.Render(root, currentTime, Extensions.DegToRad(trackBar2.Value), dists, flux, currentTime * currentTimeFactor);
 
             pictureBox1.Invalidate();
             pictureBox2.Invalidate();
@@ -102,11 +145,18 @@ namespace Eclipsor
             //    { maxFlux = flux[i]; }
             //}
 
+            //g.DrawString("© Václav Přibík", DefaultFont, Brushes.DarkOrange, new PointF(510, 480));
+
             //if (double.IsInfinity(minFlux) || (minFlux >= maxFlux))
             //{ return; }
 
-            //minFlux = 0.0000000000000081410896090826384;
-            //maxFlux = 0.00000000000001076468493898098;
+            //// CzeV343
+            ////minFlux = 0.0000000000000081410896090826384;
+            ////maxFlux = 0.00000000000001076468493898098;
+            //// Zasche
+            //minFlux = 1.986293394705849;
+            //maxFlux = 2.1336499894654914;
+
             //int maxWidth = pictureBox1.Width;
             //int maxHeight = 200;
             //int yOffs = bmp.Height;
@@ -276,14 +326,14 @@ namespace Eclipsor
             //Rectangle r = new Rectangle(0, 0, 600, 500);
             //PaintEventArgs args = new PaintEventArgs(g, r);
             //double angle = Extensions.DegToRad(trackBar2.Value);
-            //for (int i = 0; i < trackBar1.Maximum; i++) // trackBar1.Maximum
+            //for (int i = 0; i < trackBar1.Maximum * currentTimeFactor; i++) // trackBar1.Maximum
             //{
-            //    root.PlaceInTime(i);
-            //    renderer.Render(root, i, angle, dists, flux);
+            //    root.PlaceInTime((double)i / currentTimeFactor);
+            //    renderer.Render(root, angle, dists, flux, i);
             //    pictureBox1_Paint(this, args);
-            //    bmp.Save(@"D:\frame" + i.ToString("D4") + ".png");
-            //} 
-            
+            //    bmp.Save(@"D:\Work\Astro\Eclipsor\Zasche\frame" + i.ToString("D4") + ".png");
+            //}
+
             //return;
             // --- HACK
             button1.Enabled = false;
@@ -299,13 +349,14 @@ namespace Eclipsor
             fpsStart = DateTime.Now;
             double angle = (double)e.Argument;
             int counter = 0;
-            for (int i = 0; i < trackBar1.Maximum; i++)
+            for (int i = 0; i < trackBar1.Maximum * currentTimeFactor; i++)
             {
                 if (flux[i] > int.MinValue)
                 { continue; }
 
-                root.PlaceInTime(i);
-                renderer.Render(root, i, angle, dists, flux);
+                double currentTime = (double)i / currentTimeFactor;
+                root.PlaceInTime(currentTime);
+                renderer.Render(root, currentTime, angle, dists, flux, i);
                 counter++;
                 fpsCounter++;
                 if (counter > 10)
@@ -364,7 +415,7 @@ namespace Eclipsor
         private void rendererComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
             renderer = renderers[rendererComboBox.SelectedIndex];
-            renderer.Render(root, currentTime, Extensions.DegToRad(trackBar2.Value), dists, flux);
+            renderer.Render(root, currentTime, Extensions.DegToRad(trackBar2.Value), dists, flux, currentTime * currentTimeFactor);
             pictureBox2.Invalidate();
         }
     }
